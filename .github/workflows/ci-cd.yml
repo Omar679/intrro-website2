@@ -22,3 +22,19 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/devops-website:latest
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/devops-website:latest
+            docker stop devops-website || true
+            docker rm devops-website || true
+            docker run -d -p 80:80 --name devops-website ${{ secrets.DOCKERHUB_USERNAME}}/devops-website:latest
+            echo "Deployment completed!"
